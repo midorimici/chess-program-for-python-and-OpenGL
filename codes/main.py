@@ -24,6 +24,8 @@ class Game:
 
         # アンパッサン
         self.advanced2_pos = None
+        # プロモーション
+        self.prom = False
 
         # マウスポインタの位置
         self.mousepos = [-1.0, -1.0]
@@ -69,6 +71,7 @@ class Game:
                     else:
                         self.advanced2_pos = None
                 self.renew_gameboard(startpos, endpos, self.gameboard)
+                self.promotion(target, endpos)
                 if self.is_check(target.color, self.gameboard):
                     self.message = f"{target.color} player is in check"
                 if self.cannot_move(target.color, self.gameboard):
@@ -143,6 +146,25 @@ class Game:
                     and endpos[0] == self.advanced2_pos[0])
         else:
             return False
+
+    def promotion(self, piece, endpos):
+        '''
+        プロモーションできるとき，True
+
+        Parameters
+        ----------
+        piece : obj
+            駒．
+        endpos : tuple > (int, int)
+            終了位置．
+        
+        Returns
+        -------
+        bool
+        '''
+        if (piece.name == 'WP' and endpos[1] == 7
+                or piece.name == 'BP' and endpos[1] == 0):
+            self.prom = True
 
     def is_check(self, color, gameboard):
         '''
@@ -240,6 +262,7 @@ class Game:
                 rank = i
         return (file_, rank)
 
+
     def idle_move(self):
         '''駒が動く時のアニメーション'''
         sleep(1.0 / 100)
@@ -291,6 +314,16 @@ class Game:
             draw_available_moves(
                 self.valid_moves(piece, self.startpos, self.gameboard),
                 opponent=self.playersturn != piece.color)
+        # プロモーション
+        if self.prom:
+            draw_balloon(*self.endpos)
+            piece_color = self.gameboard[self.endpos].color
+            glEnable(GL_TEXTURE_2D)
+            draw_img(2.0, 3.5, piece_ID[piece_color + 'N'])
+            draw_img(3.0, 3.5, piece_ID[piece_color + 'B'])
+            draw_img(4.0, 3.5, piece_ID[piece_color + 'R'])
+            draw_img(5.0, 3.5, piece_ID[piece_color + 'Q'])
+            glDisable(GL_TEXTURE_2D)
         glDisable(GL_BLEND)
         glutSwapBuffers()
 
@@ -334,6 +367,21 @@ class Game:
                     self.startpos = self.parse_mouse()
             except KeyError:
                 pass
+            # プロモーション
+            if self.prom:
+                piece_color = self.gameboard[self.endpos].color
+                if on_square(*self.mousepos, 1.5, 2.5, 3.0, 4.0):
+                    self.gameboard[self.endpos] = Knight(piece_color, piece_color + 'N')
+                    self.prom = False
+                if on_square(*self.mousepos, 2.5, 3.5, 3.0, 4.0):
+                    self.gameboard[self.endpos] = Bishop(piece_color, piece_color + 'B')
+                    self.prom = False
+                if on_square(*self.mousepos, 3.5, 4.5, 3.0, 4.0):
+                    self.gameboard[self.endpos] = Rook(piece_color, piece_color + 'R')
+                    self.prom = False
+                if on_square(*self.mousepos, 4.5, 5.5, 3.0, 4.0):
+                    self.gameboard[self.endpos] = Queen(piece_color, piece_color + 'Q')
+                    self.prom = False
 
             glutPostRedisplay()
 

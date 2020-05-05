@@ -175,6 +175,48 @@ def circle(x, y, opponent, r=0.25):
     glPopMatrix()
 
 
+def draw_balloon(x, y):
+	'''
+    プロモーションのときの吹き出しを描画する
+    
+    Parameters
+	----------
+	x, y : int
+		駒の座標．
+    '''
+	glColor(0.5, 0.5, 0.5)  # 色の指定
+	glBegin(GL_QUADS)       # 四角形を描画
+	glVertex(1.0, 2.5)
+	glVertex(1.0, 4.5)
+	glVertex(6.0, 4.5)
+	glVertex(6.0, 2.5)
+	glEnd()
+	glBegin(GL_TRIANGLES)   # 三角形を描画
+	glVertex(3.0, 3.5)
+	glVertex(4.0, 3.5)
+	glVertex(x, y)
+	glEnd()
+
+
+def on_square(x, y, left, right, bottom, top):
+	'''
+	left < x < right かつ bottom < y < top のとき，True
+	
+	Parameters
+	----------
+	x, y : float
+		測定する座標．
+	left, right, bottom, top : float
+		ボタンの左右下上端の座標．
+
+	Returns
+	-------
+	bool
+	'''
+	if left < x < right and bottom < y < top:
+		return True
+
+
 dark_squares_list = ([(i, j) for i in range(0, 8, 2) for j in range(0, 8, 2)]
     + [(i, j) for i in range(1, 8, 2) for j in range(1, 8, 2)])
 

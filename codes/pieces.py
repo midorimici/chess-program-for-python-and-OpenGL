@@ -1,5 +1,5 @@
-WHITE = "white"
-BLACK = "black"
+WHITE = "W"
+BLACK = "B"
 
 
 class Piece:

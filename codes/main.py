@@ -26,6 +26,9 @@ class Game:
         self.advanced2_pos = None
         # プロモーション
         self.prom = False
+        # キャスリング
+        # キャスリングのポテンシャルが残っているか
+        self.can_castling = {'W': [True, True], 'B': [True, True]}
 
         # マウスポインタの位置
         self.mousepos = [-1.0, -1.0]
@@ -64,12 +67,31 @@ class Game:
             if target and target.color == self.playersturn:
                 print("found "+str(target))
                 self.message = "that is a valid move"
+
                 # 相手のポーンが2歩進んだ
                 if target.abbr == 'P':
                     if endpos[1] == startpos[1] + 2*target.direction:
                         self.advanced2_pos = endpos
                     else:
                         self.advanced2_pos = None
+
+                # キングが動いた
+                if target.name == 'WK':
+                    self.can_castling['W'] = [False, False]
+                if target.name == 'BK':
+                    self.can_castling['B'] = [False, False]
+                # ルークが動いた
+                if target.name == 'WR':
+                    if startpos[0] == 0:
+                        self.can_castling['W'][0] = False
+                    if startpos[0] == 7:
+                        self.can_castling['W'][1] = False
+                if target.name == 'BR':
+                    if startpos[0] == 0:
+                        self.can_castling['B'][0] = False
+                    if startpos[0] == 7:
+                        self.can_castling['B'][1] = False
+
                 self.renew_gameboard(startpos, endpos, self.gameboard)
                 self.promotion(target, endpos)
                 if self.is_check(target.color, self.gameboard):
@@ -111,6 +133,12 @@ class Game:
         for endpos in ([(i, 2) for i in range(8)] + [(i, 5) for i in range(8)]):
             if self.en_passant_requirements(piece, startpos, endpos):
                 self.en_passant = True
+                result += [endpos]
+        # キャスリング
+        for endpos in [(2, 0), (6, 0), (2, 7), (6, 7)]:
+            if self.castling_requirements(piece, endpos, 0, gameboard):
+                result += [endpos]
+            if self.castling_requirements(piece, endpos, 1, gameboard):
                 result += [endpos]
         # チェック回避のため動き縛り
         result_tmp = copy(result)
@@ -165,6 +193,124 @@ class Game:
         if (piece.name == 'WP' and endpos[1] == 7
                 or piece.name == 'BP' and endpos[1] == 0):
             self.prom = True
+
+    def castling_requirements(self, piece, endpos, side, gameboard):
+        '''
+        キャスリングの条件を満たすとき，True
+        side == 0 -> aファイル側
+        side == 1 -> hファイル側
+
+        Parameters
+        ----------
+        piece : obj
+            駒．キングでなければ return は False．
+        endpos : tuple > (int, int)
+            終了位置．絶対座標．
+        side : int > 0, 1
+            0 -- クイーンサイド
+            1 -- キングサイド
+        gameboard : dict > {(int, int): obj, ...}
+            盤面．
+
+        Returns
+        -------
+        bool
+        '''
+        def create_tmp_board(startpos_y, endpos):
+            '''
+            キングの通過するマスが攻撃されていないことを確認するために，
+            キングがそのマスに動いたときに攻撃されるかを見るための
+            仮の盤面を出力する
+            
+            Parameters
+            ----------
+            startpos_y : int
+                開始位置y座標．
+            endpos : tuple > (int, int)
+                終了位置．絶対座標．
+
+            Returns
+            -------
+            gameboard_tmp : dict > {(int, int): obj, ...}
+            '''
+            gameboard_tmp = copy(gameboard)
+            if (4, startpos_y) in gameboard_tmp:
+                gameboard_tmp[endpos] = gameboard_tmp[(4, startpos_y)]
+                del gameboard_tmp[(4, startpos_y)]
+            return gameboard_tmp
+        
+        def path_is_not_attacked(startpos_y, king_route):
+            '''
+            キングが通るマスのどれかが相手の駒に攻撃されていれば False を返す
+
+            Parameters
+            ----------
+            startpos_y : int
+                開始位置y座標．
+            king_route : list > [int, ...]
+                キングが通る位置x座標のリスト．
+
+            Returns
+            -------
+            bool
+            '''
+            for pos in king_route:
+                if self.is_check(piece.color, create_tmp_board(startpos_y, (pos, startpos_y))):
+                    return False
+            return True
+
+        common_req = (self.can_castling[piece.color][side]  # キャスリングに関与する駒が一度も動いていない
+            and not self.is_check(piece.color, gameboard))  # キングがチェックされていない
+        # 白のキャスリング
+        if piece.color == 'W':
+            piece_req = (piece.name == 'WK'
+                and (7*side, 0) in gameboard
+                and gameboard[(7*side, 0)].name == 'WR')
+            # クイーンサイド
+            if side == 0:
+                special_req = (endpos == (2, 0)
+                    # キングとルークの間に駒がない
+                    and (1, 0) not in self.gameboard
+                    and (2, 0) not in self.gameboard
+                    and (3, 0) not in self.gameboard
+                    # キングが通過するマスが敵に攻撃されていない
+                    and path_is_not_attacked(0, [2, 3])
+                    )
+            # キングサイド
+            if side == 1:
+                special_req = (endpos == (6, 0)
+                    # キングとルークの通過するマスに駒がない
+                    and (6, 0) not in self.gameboard
+                    and (5, 0) not in self.gameboard
+                    # キングが通過するマスが敵に攻撃されていない
+                    and path_is_not_attacked(0, [6, 5])
+                    )
+        # 黒のキャスリング
+        if piece.color == 'B':
+            piece_req = (piece.name == 'BK'
+                and (7*side, 7) in gameboard
+                and gameboard[(7*side, 7)].name == 'BR')
+            # クイーンサイド
+            if side == 0:
+                special_req = (endpos == (2, 7)
+                    # キングとルークの通過するマスに駒がない
+                    and (1, 7) not in self.gameboard
+                    and (2, 7) not in self.gameboard
+                    and (3, 7) not in self.gameboard
+                    # キングが通過するマスが敵に攻撃されていない
+                    and path_is_not_attacked(7, [2, 3])
+                    )
+            # キングサイド
+            if side == 1:
+                special_req = (endpos == (6, 7)
+                    # キングとルークの通過するマスに駒がない
+                    and (6, 7) not in self.gameboard
+                    and (5, 7) not in self.gameboard
+                    # キングが通過するマスが敵に攻撃されていない
+                    and path_is_not_attacked(7, [6, 5])
+                    )
+
+        return common_req and piece_req and special_req
 
     def is_check(self, color, gameboard):
         '''
@@ -249,6 +395,27 @@ class Game:
             elif (color == BLACK
                     and gameboard.get((endpos[0], endpos[1] + 1))):
                 del gameboard[(endpos[0], endpos[1] + 1)]
+        # キャスリング
+        if (gameboard[endpos].abbr == 'K'
+                and abs(startpos[0] - endpos[0]) == 2):
+            # クイーンサイド
+            # 白
+            if endpos == (2, 0):
+                del gameboard[(0, 0)]
+                gameboard[(3, 0)] = Rook('W', 'WR')
+            # 黒
+            if endpos == (2, 7):
+                del gameboard[(0, 7)]
+                gameboard[(3, 7)] = Rook('B', 'BR')
+            # キングサイド
+            # 白
+            if endpos == (6, 0):
+                del gameboard[(7, 0)]
+                gameboard[(5, 0)] = Rook('W', 'WR')
+            # 黒
+            if endpos == (6, 7):
+                del gameboard[(7, 7)]
+                gameboard[(5, 7)] = Rook('B', 'BR')
 
     def parse_mouse(self):
         '''マウスポインタの位置から指定したマス目を出力'''

@@ -7,6 +7,7 @@ from OpenGL.GL import *
 from OpenGL.GLUT import *
 
 from utils import *
+from games import *
 from pieces import *
 
 WSIZE = 720     # 画面サイズ
@@ -17,10 +18,8 @@ opponent = {W: B, B: W}
 class Game:
     def __init__(self):
         self.playersturn = W
-        self.message = "this is where prompts will go"
         self.gameboard = {}
-        self.place_pieces()
-        print("chess program. enter moves in algebraic notation separated by space")
+        self.kind = None
 
         # アンパッサン
         self.advanced2_pos = None
@@ -42,31 +41,35 @@ class Game:
 
         self.glmain()
 
+    def after_deciding_kind(self):
+        '''ゲーム種類決定後の処理'''
+        # 駒の配置
+        self.place_pieces()
+        # 画像の設定
+        for name, num in self.kind.ID.items():
+            set_img(name, name[0], num)
+
     def place_pieces(self):
-        for i in range(0, 8):
-            self.gameboard[(i, 1)] = Pawn(W, 1)
-            self.gameboard[(i, 6)] = Pawn(B, -1)
-
-        placers = [Rook, Knight, Bishop, Queen, King, Bishop, Unicorn, Rook]
-
-        for i in range(0, 8):
-            self.gameboard[(i, 0)] = placers[i](W)
-            self.gameboard[(i, 7)] = placers[i](B)
+        for fl in range(self.kind.size):
+            for rk in self.kind.placers:
+                # None を指定すれば駒が置かれることはなく次のマスへ進む
+                if self.kind.placers[rk][fl] is not None:
+                    # 白の駒
+                    self.gameboard[(fl, rk - 1)] \
+                        = self.kind.placers[rk][fl]('W')
+                    # 黒の駒
+                    self.gameboard[(fl, self.kind.size - rk)] \
+                        = self.kind.placers[rk][fl]('B')
 
     def main(self):
-        print(self.message)
-        self.message = ""
         startpos, endpos = self.startpos, self.endpos
         if None not in startpos + endpos:
             try:
                 target = self.gameboard[startpos]
             except:
-                self.message = "could not find piece; index probably out of range"
                 target = None
 
             if target and target.color == self.playersturn:
-                print("found "+str(target))
-                self.message = "that is a valid move"
 
                 # 相手のポーンが2歩進んだ
                 if target.abbr == 'P':
@@ -95,20 +98,18 @@ class Game:
                 self.renew_gameboard(startpos, endpos, self.gameboard)
                 self.promotion(target, endpos)
                 if self.is_check(target.color, self.gameboard):
-                    self.message = f"{target.color} player is in check"
+                    print(f"{target.color} player is in check")
                 if self.cannot_move(target.color, self.gameboard):
                     if self.is_check(target.color, self.gameboard):
-                        self.message = f"Checkmate! {opponent[target.color]} player won!"
+                        print(f"Checkmate! {opponent[target.color]} player won!")
                         sys.exit()
                     else:
-                        self.message = "Stalemate! It's draw."
+                        print("Stalemate! It's draw.")
                         sys.exit()
                 if self.playersturn == B:
                     self.playersturn = W
                 else:
                     self.playersturn = B
-            else:
-                self.message = "there is no piece in that space"
 
     def valid_moves(self, piece, startpos, gameboard):
         '''
@@ -391,11 +392,11 @@ class Game:
         if self.en_passant:
             if (color == W
                     and gameboard.get((endpos[0], endpos[1] - 1))):
-                if (gameboard[endpos[0], endpos[1] - 1].name='BP'):
+                if (gameboard[endpos[0], endpos[1] - 1].name == 'BP'):
                     del gameboard[(endpos[0], endpos[1] - 1)]
             elif (color == B
                     and gameboard.get((endpos[0], endpos[1] + 1))):
-                if (gameboard[endpos[0], endpos[1] - 1].name='WP'):
+                if (gameboard[endpos[0], endpos[1] + 1].name == 'WP'):
                     del gameboard[(endpos[0], endpos[1] + 1)]
         # キャスリング
         if (gameboard[endpos].abbr == 'K'
@@ -448,50 +449,54 @@ class Game:
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glEnable(GL_BLEND)
 
-        if self.time == 1:
-            self.main()
+        if self.kind == None:
+            draw_game_menu()
+        else:
+            if self.time == 1:
+                self.main()
 
-        draw_squares()
-        # 移動開始位置のマスの色を変える
-        if None not in self.startpos:
-            glColor(0.0, 1.0, 0.0, 0.2)
-            square(*self.startpos)
-        draw_file()
-        draw_rank()
-        draw_pieces(self.gameboard, piece_ID)
-        if self.moving:
-            # 行先の駒を隠す
-            if self.endpos in dark_squares_list:
-                glColor(0.82, 0.55, 0.28)
-            else:
-                glColor(1.00, 0.81, 0.62)
-            square(*self.endpos)
-            # 動き中の駒を描画する
-            if self.endpos in self.gameboard:
+            draw_squares()
+            # 移動開始位置のマスの色を変える
+            if None not in self.startpos:
+                glColor(0.0, 1.0, 0.0, 0.2)
+                square(*self.startpos)
+            draw_file()
+            draw_rank()
+            draw_pieces(self.gameboard, piece_ID)
+            if self.moving:
+                # 行先の駒を隠す
+                if self.endpos in dark_squares_list:
+                    glColor(0.82, 0.55, 0.28)
+                else:
+                    glColor(1.00, 0.81, 0.62)
+                square(*self.endpos)
+                # 動き中の駒を描画する
+                if self.endpos in self.gameboard:
+                    glEnable(GL_TEXTURE_2D)
+                    draw_img(self.startpos[0] + ((self.endpos[0] - self.startpos[0]) / 2)
+                            * (sin(pi*(self.time - 5) / 10) + 1),
+                            self.startpos[1] +
+                            ((self.endpos[1] - self.startpos[1]) / 2)
+                            * (sin(pi*(self.time - 5) / 10) + 1),
+                            piece_ID[self.gameboard[self.startpos if self.time == 0 else self.endpos].name])
+                    glDisable(GL_TEXTURE_2D)
+            # 可能な移動先の表示
+            if self.select_dest and None not in self.startpos:
+                piece = self.gameboard[self.startpos]
+                draw_available_moves(
+                    self.valid_moves(piece, self.startpos, self.gameboard),
+                    opponent=self.playersturn != piece.color)
+            # プロモーション
+            if self.prom:
+                draw_balloon(*self.endpos)
+                piece_color = self.gameboard[self.endpos].color
                 glEnable(GL_TEXTURE_2D)
-                draw_img(self.startpos[0] + ((self.endpos[0] - self.startpos[0]) / 2)
-                         * (sin(pi*(self.time - 5) / 10) + 1),
-                         self.startpos[1] +
-                         ((self.endpos[1] - self.startpos[1]) / 2)
-                         * (sin(pi*(self.time - 5) / 10) + 1),
-                         piece_ID[self.gameboard[self.startpos if self.time == 0 else self.endpos].name])
+                draw_img(2.0, 3.5, piece_ID[piece_color + 'N'])
+                draw_img(3.0, 3.5, piece_ID[piece_color + 'B'])
+                draw_img(4.0, 3.5, piece_ID[piece_color + 'R'])
+                draw_img(5.0, 3.5, piece_ID[piece_color + 'Q'])
                 glDisable(GL_TEXTURE_2D)
-        # 可能な移動先の表示
-        if self.select_dest and None not in self.startpos:
-            piece = self.gameboard[self.startpos]
-            draw_available_moves(
-                self.valid_moves(piece, self.startpos, self.gameboard),
-                opponent=self.playersturn != piece.color)
-        # プロモーション
-        if self.prom:
-            draw_balloon(*self.endpos)
-            piece_color = self.gameboard[self.endpos].color
-            glEnable(GL_TEXTURE_2D)
-            draw_img(2.0, 3.5, piece_ID[piece_color + 'N'])
-            draw_img(3.0, 3.5, piece_ID[piece_color + 'B'])
-            draw_img(4.0, 3.5, piece_ID[piece_color + 'R'])
-            draw_img(5.0, 3.5, piece_ID[piece_color + 'Q'])
-            glDisable(GL_TEXTURE_2D)
+            
         glDisable(GL_BLEND)
         glutSwapBuffers()
 
@@ -518,21 +523,30 @@ class Game:
         if (button == GLUT_LEFT_BUTTON
                 and state == GLUT_DOWN):
             try:
-                # 行先選択
-                if (self.select_dest
-                        and self.parse_mouse() in self.valid_moves(
-                            self.gameboard[self.startpos], self.startpos, self.gameboard)):
-                    self.select_dest = False
-                    self.endpos = self.parse_mouse()
-                    self.time = 0
-                    self.moving = True
-                    glutIdleFunc(self.idle_move)    # アニメーションの有効化
-                    glutMouseFunc(None)             # マウス操作の無効化
-                # 駒選択
-                elif (self.parse_mouse() in self.gameboard):
-                    self.startpos, self.endpos = (None, None), (None, None)
-                    self.select_dest = True
-                    self.startpos = self.parse_mouse()
+                # ゲーム種類選択
+                if self.kind == None:
+                    for i in range(2):
+                        for j in range(5):
+                            if i in game_dict and j < len(game_dict[i]):
+                                if on_square(*self.mousepos, 4.5*i - 0.5, 4.5*i + 3.0, 6.5 - 1.5*j, 7.5 - 1.5*j):
+                                    self.kind = game_dict[i][j]()
+                                    self.after_deciding_kind()
+                else:
+                    # 行先選択
+                    if (self.select_dest
+                            and self.parse_mouse() in self.valid_moves(
+                                self.gameboard[self.startpos], self.startpos, self.gameboard)):
+                        self.select_dest = False
+                        self.endpos = self.parse_mouse()
+                        self.time = 0
+                        self.moving = True
+                        glutIdleFunc(self.idle_move)    # アニメーションの有効化
+                        glutMouseFunc(None)             # マウス操作の無効化
+                    # 駒選択
+                    elif (self.parse_mouse() in self.gameboard):
+                        self.startpos, self.endpos = (None, None), (None, None)
+                        self.select_dest = True
+                        self.startpos = self.parse_mouse()
             except KeyError:
                 pass
             # プロモーション

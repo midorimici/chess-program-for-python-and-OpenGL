@@ -217,6 +217,45 @@ def on_square(x, y, left, right, bottom, top):
 		return True
 
 
+def draw_button(left, right, bottom, top,
+        letter, back_color=(1.00, 0.81, 0.62), font_color=(0.82, 0.55, 0.28)):
+    '''ボタンを描画する
+
+    Parameters
+    ----------
+    left, right, bottom, top : float
+        ボタンの左右下上端の座標．
+    letter : str
+        ボタン上に描画する文字．
+    back_color : tuple or list, default (1.00, 0.81, 0.62)
+        ボタンの色．
+    font_color : tuple or list, default (0.82, 0.55, 0.28)
+        文字の色．
+    '''
+    glColor(*back_color)
+    glBegin(GL_QUADS)
+    glVertex(left, bottom)
+    glVertex(left, top)
+    glVertex(right, top)
+    glVertex(right, bottom)
+    glEnd()
+    glColor(*font_color)
+    draw_str((left + right) / 2 - 0.1 * len(letter), (bottom + top) / 2, letter, gap=0.2)
+
+
+# ゲーム選択画面に表示するゲーム名
+game_name_dict = {0: ('Normal Chess', 'Unicorn')}
+
+
+def draw_game_menu():
+	'''ゲーム選択メニューを描画する'''
+	for i in range(2):
+		for j in range(5):
+			if i in game_name_dict and j < len(game_name_dict[i]):
+				draw_button(4.5*i - 0.5, 4.5*i + 3.0, 6.5 - 1.5*j, 7.5 - 1.5*j,
+                    game_name_dict[i][j])
+
+
 dark_squares_list = ([(i, j) for i in range(0, 8, 2) for j in range(0, 8, 2)]
     + [(i, j) for i in range(1, 8, 2) for j in range(1, 8, 2)])
 

@@ -5,6 +5,7 @@ from math import pi, sin
 
 from OpenGL.GL import *
 from OpenGL.GLUT import *
+import pygame
 
 from utils import *
 from games import *
@@ -14,6 +15,12 @@ WSIZE = 720     # 画面サイズ
 
 opponent = {W: B, B: W}
 
+# 音声の設定
+pygame.mixer.init()
+snd = pygame.mixer.Sound
+# 各効果音の設定
+select_snd = snd('../sounds/select.wav')
+move_snd = snd('../sounds/move.wav')
 
 class Game:
     def __init__(self):
@@ -531,6 +538,7 @@ class Game:
                                 if on_square(*self.mousepos, 4.5*i - 0.5, 4.5*i + 3.0, 6.5 - 1.5*j, 7.5 - 1.5*j):
                                     self.kind = game_dict[i][j]()
                                     self.after_deciding_kind()
+                                    select_snd.play()
                 else:
                     # 行先選択
                     if (self.select_dest
@@ -542,6 +550,7 @@ class Game:
                         self.moving = True
                         glutIdleFunc(self.idle_move)    # アニメーションの有効化
                         glutMouseFunc(None)             # マウス操作の無効化
+                        move_snd.play()
                     # 駒選択
                     elif (self.parse_mouse() in self.gameboard):
                         self.startpos, self.endpos = (None, None), (None, None)

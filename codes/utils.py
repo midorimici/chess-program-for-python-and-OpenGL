@@ -244,7 +244,7 @@ def draw_button(left, right, bottom, top,
 
 
 # ゲーム選択画面に表示するゲーム名
-game_name_dict = {0: ('Normal Chess', 'Unicorn')}
+game_name_dict = {0: ('Normal Chess', 'Chess 960', 'Unicorn')}
 
 
 def draw_game_menu():
@@ -298,3 +298,14 @@ def draw_available_moves(poslist, opponent=None):
     '''
     for pos in poslist:
         circle(*pos, opponent)
+
+
+def draw_castling_confirmation(endpos):
+    '''キャスリング確認ダイアログを表示する'''
+    draw_balloon(*endpos)
+    glColor(1.0, 1.0, 1.0)
+    draw_str(2.0, 4.0, 'Castling?')
+    draw_button(1.5, 3.0, 3.0, 3.5, 'Yes',
+                (1.0, 1.0, 1.0), (0.0, 0.0, 0.0))
+    draw_button(4.0, 5.5, 3.0, 3.5, 'No',
+                (1.0, 1.0, 1.0), (0.0, 0.0, 0.0))

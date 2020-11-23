@@ -175,27 +175,29 @@ def circle(x, y, opponent, r=0.25):
     glPopMatrix()
 
 
-def draw_balloon(x, y):
-	'''
-    プロモーションのときの吹き出しを描画する
-    
-    Parameters
-	----------
-	x, y : int
-		駒の座標．
+def draw_balloon(x, y, num=4):
     '''
-	glColor(0.5, 0.5, 0.5)  # 色の指定
-	glBegin(GL_QUADS)       # 四角形を描画
-	glVertex(1.0, 2.5)
-	glVertex(1.0, 4.5)
-	glVertex(6.0, 4.5)
-	glVertex(6.0, 2.5)
-	glEnd()
-	glBegin(GL_TRIANGLES)   # 三角形を描画
-	glVertex(3.0, 3.5)
-	glVertex(4.0, 3.5)
-	glVertex(x, y)
-	glEnd()
+    プロモーションのときの吹き出しを描画する
+
+    Parameters
+    ----------
+    x, y : int
+        駒の座標．
+    num : int, default 4
+        プロモーション選択肢数．
+    '''
+    glColor(0.5, 0.5, 0.5)  # 色の指定
+    glBegin(GL_QUADS)       # 四角形を描画
+    glVertex(1.0, 2.5 - ((num - 1) // 4) / 2)
+    glVertex(1.0, 4.5 + ((num - 1) // 4) / 2)
+    glVertex(2.0 + num if num <= 4 else 6.0, 4.5 + ((num - 1) // 4) / 2)
+    glVertex(2.0 + num if num <= 4 else 6.0, 2.5 - ((num - 1) // 4) / 2)
+    glEnd()
+    glBegin(GL_TRIANGLES)   # 三角形を描画
+    glVertex(3.0, 3.5)
+    glVertex(4.0, 3.5)
+    glVertex(x, y)
+    glEnd()
 
 
 def on_square(x, y, left, right, bottom, top):

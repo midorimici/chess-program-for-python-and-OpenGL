@@ -581,13 +581,14 @@ class Game:
                     opponent=self.playersturn != piece.color)
             # プロモーション
             if self.prom:
-                draw_balloon(*self.endpos)
+                draw_balloon(*self.endpos, num=len(self.kind.promote2))
                 piece_color = self.gameboard[self.endpos].color
                 glEnable(GL_TEXTURE_2D)
-                draw_img(2.0, 3.5, piece_ID[piece_color + 'N'])
-                draw_img(3.0, 3.5, piece_ID[piece_color + 'B'])
-                draw_img(4.0, 3.5, piece_ID[piece_color + 'R'])
-                draw_img(5.0, 3.5, piece_ID[piece_color + 'Q'])
+                for i in range(len(self.kind.promote2)):
+                    draw_img(2.0 + i % 4,
+                        3.5 + ((len(self.kind.promote2) - 1)//4)/2 - i//4,
+                        self.kind.ID[piece_color +
+                            self.kind.promote2[i].abbr])
                 glDisable(GL_TEXTURE_2D)
             # キャスリングするかどうかの確認
             if self.confirm_castling:
@@ -669,18 +670,14 @@ class Game:
             # プロモーション
             if self.prom:
                 piece_color = self.gameboard[self.endpos].color
-                if on_square(*self.mousepos, 1.5, 2.5, 3.0, 4.0):
-                    self.gameboard[self.endpos] = Knight(piece_color)
-                    self.prom = False
-                if on_square(*self.mousepos, 2.5, 3.5, 3.0, 4.0):
-                    self.gameboard[self.endpos] = Bishop(piece_color)
-                    self.prom = False
-                if on_square(*self.mousepos, 3.5, 4.5, 3.0, 4.0):
-                    self.gameboard[self.endpos] = Rook(piece_color)
-                    self.prom = False
-                if on_square(*self.mousepos, 4.5, 5.5, 3.0, 4.0):
-                    self.gameboard[self.endpos] = Queen(piece_color)
-                    self.prom = False
+                for i in range(len(self.kind.promote2)):
+                    if on_square(*self.mousepos,
+                                    1.5 + i % 4,
+                                    2.5 + i % 4,
+                                    3.0 + ((len(self.kind.promote2) - 1)//4)/2 - i//4,
+                                    4.0 + ((len(self.kind.promote2) - 1)//4)/2 - i//4):
+                        self.gameboard[self.endpos] = self.kind.promote2[i](piece_color)
+                        self.prom = False
 
             glutPostRedisplay()
 
